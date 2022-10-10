@@ -1,0 +1,15 @@
+{
+    "name": "hasan/saved_telegram_message",
+    "autoload": {
+        "psr-4": {
+            "Hasan\\SavedTelegramMessage\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "HasanKulbuzhev",
+            "email": "ashatkfhcj@gmail.com"
+        }
+    ],
+    "require": {}
+}
