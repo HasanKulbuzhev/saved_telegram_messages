@@ -11,5 +11,7 @@
             "email": "ashatkfhcj@gmail.com"
         }
     ],
-    "require": {}
+    "require": {
+        "irazasyed/telegram-bot-sdk": "^2.0"
+    }
 }
