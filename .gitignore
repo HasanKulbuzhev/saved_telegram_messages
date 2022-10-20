@@ -1,1 +1,8 @@
 /vendor/
+messages.json
+session.*
+madeline*
+*.txt
+*.log
+.idea
+.env
