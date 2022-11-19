@@ -42,6 +42,7 @@ class TelegramChanelService
     private function setMessages()
     {
         $messages = $this->MadelineProto->messages->getHistory(['peer' => $this->fromPeer, 'limit' => 30])['messages'];
+        $messageIds = [];
         do {
             if (isset($offset_id)) {
                 $messages = $this->MadelineProto->messages->getHistory(['offset_id' => $offset_id, 'peer' => $this->fromPeer, 'limit' => 30])['messages'];
@@ -68,10 +69,22 @@ class TelegramChanelService
                 echo "Сообщение с id=" . $message['id'] . " сохранено в массив! \n";
             }
 
-            if (!empty($messages)) {
+            if ($is_grouped) {
+                foreach (array_reverse($messages) as $message) {
+                    if (is_null($offset_id)) {
+                        $offset_id = $message['id'];
+                    }
+
+                    $messageIds[] = $message['id'];
+                    echo "Сообщение с id=" . $message['id'] . " сохранено в массив! \n";
+                }
+
+            }
+
+            if (!empty($messageIds)) {
                 $this->allForwardMessage[] = ['ids' => $messageIds, 'send' => false];
             }
-        } while (count($messages) > 0);
+        } while (count($messageIds) > 0);
 
         if (file_put_contents($this->messages_file_name, json_encode($this->allForwardMessage))) {
             echo "Идентификаторы сообщений успешно сохранены в файл!";
