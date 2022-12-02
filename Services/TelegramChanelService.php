@@ -3,6 +3,7 @@
 namespace Services;
 
 use danog\MadelineProto\API;
+use function Amp\File\deleteDirectory;
 
 class TelegramChanelService
 {

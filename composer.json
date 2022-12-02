@@ -2,7 +2,8 @@
     "name": "hasan/saved_telegram_message",
     "autoload": {
         "psr-4": {
-            "Hasan\\SavedTelegramMessage\\": "src/"
+            "Hasan\\SavedTelegramMessage\\": "./",
+            "Services\\": "Services"
         }
     },
     "authors": [
@@ -12,6 +13,8 @@
         }
     ],
     "require": {
-        "irazasyed/telegram-bot-sdk": "^2.0"
+        "irazasyed/telegram-bot-sdk": "^2.0",
+        "danog/madelineproto": "^7",
+        "vlucas/phpdotenv": "^5.5"
     }
 }

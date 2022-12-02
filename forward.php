@@ -1,20 +1,11 @@
 <?php
 
-namespace App;
-
-use Services\TelegramChanelService;
-use DevCoder\DotEnv;
-
-include 'madeline.php';
-include 'Services/TelegramChanelService.php';
 require_once 'vendor/autoload.php';
-include 'DevCoder/DotEnv.php';
 
-if (!file_exists('madeline.php')) {
-    copy('https://phar.madelineproto.xyz/madeline.php', 'madeline.php');
-}
+use Dotenv\Dotenv;
+use Services\TelegramChanelService;
 
-(new DotEnv(__DIR__ . '/.env'))->load();
+(DotEnv::createUnsafeImmutable(__DIR__))->load();
 
 $channel_peer = getenv('CHANNEL_TO_USERNAME');
 if (is_null($channel_peer)) {
