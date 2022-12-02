@@ -16,5 +16,5 @@ if (is_null($channel_peer)) {
 $service = new TelegramChanelService($channel_peer, getenv('CHANNEL_USERNAME'));
 $service->forwardAllMessages();
 
-echo "Все сообщения успешно сохранены";
+echo "Все сообщения успешно сохранены \n";
 

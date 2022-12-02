@@ -4,15 +4,16 @@ namespace Services;
 
 use danog\MadelineProto\API;
 use function Amp\File\deleteDirectory;
+use function Amp\Iterator\concat;
 
 class TelegramChanelService
 {
     private API $MadelineProto;
-    public array $allForwardMessage = [];
     private false|array|string $channelPeer;
     private $me;
     private string $messages_file_name;
     private string|int|null $fromPeer;
+    private CacheMessageService $cacheHelper;
 
     public function __construct(string $channelPeer, string|int|null $fromPeer = null)
     {
@@ -21,32 +22,29 @@ class TelegramChanelService
         $this->MadelineProto->start();
 
         $this->channelPeer = $channelPeer;
-        $this->messages_file_name = 'messages' . $channelPeer;
         $this->me = $this->MadelineProto->getSelf();
         $this->fromPeer = $fromPeer;
         if (is_null($this->fromPeer)) {
             $this->fromPeer = $this->me['id'];
         }
+        $this->messages_file_name = 'messages' . $channelPeer . '_' . $fromPeer;
+        $this->cacheHelper = new CacheMessageService('messages' . $channelPeer . '_' . $fromPeer);
     }
 
     public function getMessages(): array
     {
-        if (file_exists($this->messages_file_name)) {
-            $this->allForwardMessage = json_decode(file_get_contents($this->messages_file_name), true);
-        } else {
-            $this->setMessages();
-        }
+        $this->cacheMessages();
 
-        return $this->allForwardMessage;
+        return $this->cacheHelper->getData();
     }
 
-    private function setMessages()
+    private function cacheMessages()
     {
-        $messages = $this->MadelineProto->messages->getHistory(['peer' => $this->fromPeer, 'limit' => 30])['messages'];
-        $messageIds = [];
         do {
             if (isset($offset_id)) {
                 $messages = $this->MadelineProto->messages->getHistory(['offset_id' => $offset_id, 'peer' => $this->fromPeer, 'limit' => 30])['messages'];
+            } else {
+                $messages = $this->MadelineProto->messages->getHistory(['peer' => $this->fromPeer, 'limit' => 30])['messages'];
             }
 
             $messageIds = [];
@@ -58,7 +56,7 @@ class TelegramChanelService
                 if (!isset($messages['grouped_id'])) {
                     $is_grouped = false;
                 }
-                if ($is_grouped) {
+                if ($is_grouped || ($message['id'] <= $this->cacheHelper->getLastMessageId())) {
                     continue;
                 }
 
@@ -70,8 +68,13 @@ class TelegramChanelService
                 echo "Сообщение с id=" . $message['id'] . " сохранено в массив! \n";
             }
 
+            // Если все сообщения в одной группе
             if ($is_grouped) {
                 foreach (array_reverse($messages) as $message) {
+                    if ($message['id'] <= $this->cacheHelper->getLastMessageId()) {
+                        continue;
+                    }
+
                     if (is_null($offset_id)) {
                         $offset_id = $message['id'];
                     }
@@ -83,20 +86,11 @@ class TelegramChanelService
             }
 
             if (!empty($messageIds)) {
-                $this->allForwardMessage[] = ['ids' => $messageIds, 'send' => false];
+                $this->cacheHelper->updateValues(null, ['ids' => $messageIds, 'send' => false]);
             }
         } while (count($messageIds) > 0);
 
-        if (file_put_contents($this->messages_file_name, json_encode($this->allForwardMessage))) {
-            echo "Идентификаторы сообщений успешно сохранены в файл!";
-        }
-    }
-
-    public function updateLocalMessage(int|string $key, array $updateMessage): bool|int
-    {
-        $newForwardMessages = json_decode(file_get_contents($this->messages_file_name), true);
-        $newForwardMessages[$key] = $updateMessage;
-        return file_put_contents($this->messages_file_name, json_encode($newForwardMessages));
+        echo "Идентификаторы сообщений успешно сохранены в файл! \n";
     }
 
     public function forwardAllMessages()
@@ -109,8 +103,7 @@ class TelegramChanelService
 
             $isSend = $this->MadelineProto->messages->forwardMessages(['id' => $forwardMessages['ids'], 'from_peer' => $this->fromPeer, 'to_peer' => $this->channelPeer]);
             if ($isSend) {
-                $forwardMessages['send'] = true;
-                $this->updateLocalMessage($key, $forwardMessages);
+                $this->cacheHelper->updateValues($key, array_merge($forwardMessages, ['send' => true]));
                 echo "Сообщения с id " . implode(', ', $forwardMessages['ids']) . " пересланы! \n";
             } else {
                 echo "Сообщения с id " . implode(', ', $forwardMessages['ids']) . " не были пересланы! \n";
