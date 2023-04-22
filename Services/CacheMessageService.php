@@ -4,24 +4,57 @@ namespace Services;
 
 use Exception;
 use JetBrains\PhpStorm\Pure;
+use SQLite3;
 
 class CacheMessageService
 {
     private string $file_name;
-    private array $messages;
+    private string $fromPeer;
+    private string $channelPeer;
 
-    public function __construct(string $fileName)
+    public function __construct(string $fileName, string $fromPeer, string $channelPeer)
     {
         $this->file_name = $fileName;
         if (!$this->issetFile()) {
             $this->setData([]);
         }
         $this->fill();
+        $this->fromPeer = $fromPeer;
+        $this->channelPeer = $channelPeer;
     }
 
     private function fill()
     {
-        $this->messages = $this->getData(true);
+//        $this->messages = $this->getData(true);
+    }
+
+    public function getQuery(): SQLite3
+    {
+        return new SQLite3('./saved_message_db');
+    }
+
+    public function saveMessage(string $fromPeer, string $toPeer, int $fromMessageId, ?int $toMessageId = null, ?int $groupId = null, bool $send = false, bool $owner = false)
+    {
+        $send = (int) $send;
+        $prepare = $this->getQuery()->prepare('insert into history (from_channel_id, to_channel_id, from_message_id, to_message_id, group_id, send, owner) values (?, ?, ?, ?, ?, ?, ?)');
+        $prepare->bindParam(1, $fromPeer);
+        $prepare->bindParam(2, $toPeer);
+        $prepare->bindParam(3, $fromMessageId);
+        $prepare->bindParam(4, $toMessageId);
+        $prepare->bindParam(5, $groupId);
+        $prepare->bindParam(6, $send);
+        $prepare->bindParam(7, $owner);
+        $prepare->execute();
+    }
+
+    public function updateMessage(int $id, string $column, $value)
+    {
+        $prepare = $this->getQuery()->prepare(sprintf('update history set %s=? where id=?', $column));
+
+        $prepare->bindParam(1, $value);
+        $prepare->bindParam(2, $id);
+
+        $prepare->execute();
     }
 
     #[Pure] public function issetFile(): bool
@@ -29,49 +62,82 @@ class CacheMessageService
         return file_exists($this->file_name);
     }
 
-    public function getData($actual = false): array
+    public function getData(string $fromChannelPeer, string $toChannelPeer, bool $desk = false, bool $send = false): \SQLite3Result
     {
-        return $actual ?
-            json_decode(file_get_contents($this->file_name), true) :
-            $this->messages;
+        $orderType = $desk ? 'DESK' : 'ASC';
+        $sql = sprintf('Select * from history where from_channel_id=\'%s\' and to_channel_id=\'%s\' and send=%s order by from_message_id %s', $fromChannelPeer, $toChannelPeer, (int)$send, $orderType);
+        $query = $this->getQuery();
+        return $query->query($sql);
     }
 
-    public function updateValues($key, array $data): bool|int
+    public function getAllNotSendMessages(): array
     {
-        $newData = $this->getData();
-
-        if (is_null($key)) {
-            $newData[] = $data;
-        } else {
-            $newData[$key] = $data;
+        $query = $this->getData($this->fromPeer, $this->channelPeer);
+        $messages = [];
+        while ($localMessage = $query->fetchArray()) {
+            $messages[] = $localMessage;
         }
 
-        return $this->setData($newData);
+        return $messages;
     }
 
-    public function setData(array $data): bool|int
+    public function getAllSendMessages(): array
     {
-        try {
-            return file_put_contents($this->file_name, json_encode($data));
-        } catch (Exception $exception) {
-            throw $exception;
-        } finally {
-            $this->fill();
+        $query = $this->getData($this->fromPeer, $this->channelPeer, false, true);
+        $messages = [];
+        while ($localMessage = $query->fetchArray()) {
+            $messages[] = $localMessage;
         }
+
+        return $messages;
     }
 
-    public function getLastMessageId(): int
+    public function getDataToId(string $fromChannelPeer, string $toChannelPeer, int $id)
     {
-        $lastId = 0;
+        $sql = sprintf('Select * from history where from_channel_id=\'%s\' and to_channel_id=\'%s\' and id=\'%s\' order by from_message_id ASC', $fromChannelPeer, $toChannelPeer, $id);
+        $query = $this->getQuery();
+        return $query->query($sql)->fetchArray();
+    }
 
-        foreach ($this->getData() as $value) {
-            foreach ($value['ids'] as $id) {
-                if ($id > $lastId) {
-                    $lastId = $id;
-                }
-            }
-        }
+    public function getDataToGroupId(string $fromChannelPeer, string $toChannelPeer, int $groupId): \SQLite3Result
+    {
+        $sql = sprintf('Select * from history where from_channel_id=\'%s\' and to_channel_id=\'%s\' and group_id=\'%s\' order by from_message_id ASC', $fromChannelPeer, $toChannelPeer, $groupId);
+        $query = $this->getQuery();
+        return $query->query($sql);
+    }
 
-        return $lastId;
+    public function issetMessageToId($fromMessageId): bool
+    {
+        $sql = sprintf('select * from history where from_channel_id=%s and to_channel_id=%s and from_message_id=%s', $this->fromPeer, $this->channelPeer, $fromMessageId);
+        return (bool) $this->getQuery()->querySingle($sql);
+    }
+
+//    public function updateValues($key, array $data): bool|int
+//    {
+//        $newData = $this->getData();
+//
+//        if (is_null($key)) {
+//            $newData[] = $data;
+//        } else {
+//            $newData[$key] = $data;
+//        }
+//
+//        return $this->setData($newData);
+//    }
+
+//    public function setData(array $data): bool|int
+//    {
+//        try {
+//            return file_put_contents($this->file_name, json_encode($data));
+//        } catch (Exception $exception) {
+//            throw $exception;
+//        } finally {
+//            $this->fill();
+//        }
+//    }
+
+    public function getLastMessageId()
+    {
+        return $this->getQuery()->querySingle(sprintf('select max(from_channel_id) from history where from_channel_id=%s and to_channel_id=%s', $this->fromPeer, $this->channelPeer));
     }
 }

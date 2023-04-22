@@ -15,6 +15,10 @@
     "require": {
         "irazasyed/telegram-bot-sdk": "^2.0",
         "danog/madelineproto": "^7",
-        "vlucas/phpdotenv": "^5.5"
+        "vlucas/phpdotenv": "^5.5",
+      "ext-sqlite3": "*",
+      "ext-sysvsem": "*",
+        "ext-pdo": "*",
+        "ufee/sqlite3": "^1.0"
     }
 }
