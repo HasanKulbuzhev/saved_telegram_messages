@@ -38,7 +38,7 @@ class TelegramChanelService
             $this->fromPeer = $this->me['id'];
         }
         $this->cacheHelper = new CacheMessageService('messages' . $channelPeer . '_' . $fromPeer, $this->fromPeer, $this->channelPeer);
-        $this->syncDelete = $syncDelete;
+        $this->syncDelete = (bool) $syncDelete;
     }
 
     private function cacheMessages(string $fromChannel, string $toChannel)
@@ -133,7 +133,16 @@ class TelegramChanelService
                 continue;
             }
 
-            $isSend = $this->MadelineProto->messages->forwardMessages(['id' => [$message['from_message_id']], 'from_peer' => $fromPeer, 'to_peer' => $toPeer]);
+            try {
+                $isSend = $this->MadelineProto->messages->forwardMessages(['id' => [$message['from_message_id']], 'from_peer' => $fromPeer, 'to_peer' => $toPeer]);
+            } catch (\Exception $e) {
+                if ($e->getMessage() === "MESSAGE_ID_INVALID") {
+                    $this->cacheHelper->deleteMessage($message['id']);
+                    continue;
+                }
+
+                throw $e;
+            }
             $newMessage = $this->MadelineProto->messages->getHistory(['peer' => $toPeer, 'limit' => 1])['messages'][0];
 
             if ($isSend) {

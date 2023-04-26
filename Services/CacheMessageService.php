@@ -54,6 +54,15 @@ class CacheMessageService
         $prepare->execute();
     }
 
+    public function deleteMessage(int $id)
+    {
+        $prepare = $this->getQuery()->prepare('delete from history where id=?');
+
+        $prepare->bindParam(1, $id);
+
+        $prepare->execute();
+    }
+
     #[Pure] public function issetFile(): bool
     {
         return file_exists($this->file_name);
