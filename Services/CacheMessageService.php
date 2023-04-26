@@ -15,9 +15,6 @@ class CacheMessageService
     public function __construct(string $fileName, string $fromPeer, string $channelPeer)
     {
         $this->file_name = $fileName;
-        if (!$this->issetFile()) {
-            $this->setData([]);
-        }
         $this->fill();
         $this->fromPeer = $fromPeer;
         $this->channelPeer = $channelPeer;
@@ -33,7 +30,7 @@ class CacheMessageService
         return new SQLite3('./saved_message_db');
     }
 
-    public function saveMessage(string $fromPeer, string $toPeer, int $fromMessageId, ?int $toMessageId = null, ?int $groupId = null, bool $send = false, bool $owner = false)
+    public function saveMessage(string $fromPeer, string $toPeer, int $fromMessageId, ?int $toMessageId = null, ?int $groupId = null, int $send = 0, bool $owner = false)
     {
         $send = (int) $send;
         $prepare = $this->getQuery()->prepare('insert into history (from_channel_id, to_channel_id, from_message_id, to_message_id, group_id, send, owner) values (?, ?, ?, ?, ?, ?, ?)');
@@ -70,9 +67,9 @@ class CacheMessageService
         return $query->query($sql);
     }
 
-    public function getAllNotSendMessages(): array
+    public function getAllNotSendMessages($fromPeer, $toPeer): array
     {
-        $query = $this->getData($this->fromPeer, $this->channelPeer);
+        $query = $this->getData($fromPeer, $toPeer);
         $messages = [];
         while ($localMessage = $query->fetchArray()) {
             $messages[] = $localMessage;
@@ -81,9 +78,9 @@ class CacheMessageService
         return $messages;
     }
 
-    public function getAllSendMessages(): array
+    public function getAllSendMessages($fromPeer, $toPeer): array
     {
-        $query = $this->getData($this->fromPeer, $this->channelPeer, false, true);
+        $query = $this->getData($fromPeer, $toPeer, false, true);
         $messages = [];
         while ($localMessage = $query->fetchArray()) {
             $messages[] = $localMessage;
@@ -106,9 +103,15 @@ class CacheMessageService
         return $query->query($sql);
     }
 
-    public function issetMessageToId($fromMessageId): bool
+    public function issetMessageFromId($fromPeer, $toPeer, $fromMessageId): bool
     {
-        $sql = sprintf('select * from history where from_channel_id=%s and to_channel_id=%s and from_message_id=%s', $this->fromPeer, $this->channelPeer, $fromMessageId);
+        $sql = sprintf('select * from history where from_channel_id=%s and to_channel_id=%s and from_message_id=%s', $fromPeer, $toPeer, $fromMessageId);
+        return (bool) $this->getQuery()->querySingle($sql);
+    }
+
+    public function issetMessageToId($fromPeer, $toPeer, $fromMessageId): bool
+    {
+        $sql = sprintf('select * from history where from_channel_id=%s and to_channel_id=%s and to_message_id=%s', $fromPeer, $toPeer, $fromMessageId);
         return (bool) $this->getQuery()->querySingle($sql);
     }
 
