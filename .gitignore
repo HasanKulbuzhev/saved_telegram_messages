@@ -6,3 +6,4 @@ madeline*
 *.log
 .idea
 .env
+saved_message_db
