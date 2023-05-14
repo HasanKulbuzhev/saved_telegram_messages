@@ -32,7 +32,7 @@ class CacheMessageService
 
     public function saveMessage(string $fromPeer, string $toPeer, int $fromMessageId, ?int $toMessageId = null, ?int $groupId = null, int $send = 0, bool $owner = false)
     {
-        $send = (int) $send;
+        $send = (int)$send;
         $prepare = $this->getQuery()->prepare('insert into history (from_channel_id, to_channel_id, from_message_id, to_message_id, group_id, send, owner) values (?, ?, ?, ?, ?, ?, ?)');
         $prepare->bindParam(1, $fromPeer);
         $prepare->bindParam(2, $toPeer);
@@ -68,10 +68,10 @@ class CacheMessageService
         return file_exists($this->file_name);
     }
 
-    public function getData(string $fromChannelPeer, string $toChannelPeer, bool $desk = false, bool $send = false): \SQLite3Result
+    public function getData(string $fromChannelPeer, string $toChannelPeer, bool $desk = false, bool $send = false, $limit = null): \SQLite3Result
     {
-        $orderType = $desk ? 'DESK' : 'ASC';
-        $sql = sprintf('Select * from history where from_channel_id=\'%s\' and to_channel_id=\'%s\' and send=%s order by from_message_id %s', $fromChannelPeer, $toChannelPeer, (int)$send, $orderType);
+        $orderType = $desk ? 'DESC' : 'ASC';
+        $sql = sprintf('Select * from history where from_channel_id=\'%s\' and to_channel_id=\'%s\' and send=%s order by from_message_id %s %s', $fromChannelPeer, $toChannelPeer, (int)$send, $orderType, is_null($limit) ? '' : "LIMIT $limit");
         $query = $this->getQuery();
         return $query->query($sql);
     }
@@ -87,9 +87,9 @@ class CacheMessageService
         return $messages;
     }
 
-    public function getAllSendMessages($fromPeer, $toPeer): array
+    public function getAllSendMessages($fromPeer, $toPeer, $limit = null): array
     {
-        $query = $this->getData($fromPeer, $toPeer, false, true);
+        $query = $this->getData($fromPeer, $toPeer, true, true, $limit);
         $messages = [];
         while ($localMessage = $query->fetchArray()) {
             $messages[] = $localMessage;
@@ -115,13 +115,13 @@ class CacheMessageService
     public function issetMessageFromId($fromPeer, $toPeer, $fromMessageId): bool
     {
         $sql = sprintf('select * from history where from_channel_id=%s and to_channel_id=%s and from_message_id=%s', $fromPeer, $toPeer, $fromMessageId);
-        return (bool) $this->getQuery()->querySingle($sql);
+        return (bool)$this->getQuery()->querySingle($sql);
     }
 
     public function issetMessageToId($fromPeer, $toPeer, $fromMessageId): bool
     {
         $sql = sprintf('select * from history where from_channel_id=%s and to_channel_id=%s and to_message_id=%s', $fromPeer, $toPeer, $fromMessageId);
-        return (bool) $this->getQuery()->querySingle($sql);
+        return (bool)$this->getQuery()->querySingle($sql);
     }
 
 //    public function updateValues($key, array $data): bool|int

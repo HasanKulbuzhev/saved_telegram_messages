@@ -6,7 +6,7 @@ use danog\MadelineProto\API;
 
 class ChannelHelper
 {
-    public static function getChannelMessageIds(API $api, string $channelPeer): array
+    public static function getChannelMessageIds(API $api, string $channelPeer, int $limit = 0): array
     {
         $messageIds = [];
         do {
@@ -24,6 +24,9 @@ class ChannelHelper
                 }
 
                 $messageIds[] = $message['id'];
+                if (count($messageIds) >= $limit && $limit > 0) {
+                    continue 2;
+                }
             }
         } while (count($messages) > 0);
 

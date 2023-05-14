@@ -159,12 +159,12 @@ class TelegramChanelService
 
     public function deleteNotActualMessage($fromPeer, $toPeer)
     {
-        $fromMessageIds = ChannelHelper::getChannelMessageIds($this->MadelineProto, $fromPeer);
+        $fromMessageIds = ChannelHelper::getChannelMessageIds($this->MadelineProto, $fromPeer, 100);
         if ($this->syncDelete) {
-            $toMessageIds = ChannelHelper::getChannelMessageIds($this->MadelineProto, $toPeer);
+            $toMessageIds = ChannelHelper::getChannelMessageIds($this->MadelineProto, $toPeer, 300);
         }
 
-        foreach ($this->cacheHelper->getAllSendMessages($fromPeer, $toPeer) as $message) {
+        foreach ($this->cacheHelper->getAllSendMessages($fromPeer, $toPeer, 100) as $message) {
             if (!in_array($message['from_message_id'], $fromMessageIds)) {
                 $this->MadelineProto->channels->deleteMessages([
                     'channel' => $toPeer,

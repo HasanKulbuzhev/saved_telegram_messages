@@ -19,6 +19,7 @@
       "ext-sqlite3": "*",
       "ext-sysvsem": "*",
         "ext-pdo": "*",
-        "ufee/sqlite3": "^1.0"
+        "ufee/sqlite3": "^1.0",
+      "ext-mysqli": "*"
     }
 }
