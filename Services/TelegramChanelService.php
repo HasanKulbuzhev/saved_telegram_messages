@@ -112,4 +112,66 @@ class TelegramChanelService
             sleep(2);
         }
     }
+
+    /**
+     * Сохраняет публикацию в обсидиан
+     */
+    public function saveMessagesToObsidian()
+    {
+        do {
+            if (isset($offset_id)) {
+                $messages = $this->MadelineProto->messages->getHistory(['offset_id' => $offset_id, 'peer' => $this->channelPeer, 'limit' => 30])['messages'];
+            } else {
+                $messages = $this->MadelineProto->messages->getHistory(['peer' => $this->channelPeer, 'limit' => 30])['messages'];
+            }
+
+            $messageIds = [];
+            $offset_id = null;
+
+            foreach (array_reverse($messages) as $message) {
+                if (is_null($offset_id)) {
+                    $offset_id = $message['id'];
+                }
+
+                if (!isset($message['message'])) {
+                    continue;
+                }
+
+                $text = '
+202209212208
+Tags: #discord #linux #video #striming
+__
+# Мысль "' . substr($message['message'], 0, 100) . $message['id'] . '"
+' . '
+```text
+' . $message['message'] . '
+```
+__
+### Zero-Links
+[[Мысли]]
+[[Продуктивность]]
+[[Пристанище речей]]
+
+__ 
+### Links
+https://t.me/channel_vince/' . $message['id'] . '
+';
+
+                file_put_contents(
+                    '/home/hasan/tmp/Мысль "' . $message['id'] . '".md',
+                    $text
+                );
+
+                $messageIds[] = $message['id'];
+                echo "мысль " . '"' . substr(
+                        $message['message'],
+                        0,
+                        100
+                    ) . '" ' . " сохранена! \n";
+
+            }
+        } while (count($messageIds) > 0);
+
+        echo "Идентификаторы сообщений успешно сохранены в файл! \n";
+    }
 }
