@@ -174,4 +174,95 @@ https://t.me/channel_vince/' . $message['id'] . '
 
         echo "Идентификаторы сообщений успешно сохранены в файл! \n";
     }
+
+    /**
+     * Сохраняет публикацию в обсидиан
+     */
+    public function saveMessagesKalamToObsidian()
+    {
+        $path = '/home/hasan/Документы/IlmuKalamObsidian/';
+        do {
+            if (isset($offset_id)) {
+                $messages = $this->MadelineProto->messages->getHistory(['offset_id' => $offset_id, 'peer' => $this->channelPeer, 'limit' => 30])['messages'];
+            } else {
+                $messages = $this->MadelineProto->messages->getHistory(['peer' => $this->channelPeer, 'limit' => 30])['messages'];
+            }
+
+            $messageIds = [];
+            $offset_id = null;
+
+            foreach (array_reverse($messages) as $message) {
+                if (is_null($offset_id)) {
+                    $offset_id = $message['id'];
+                }
+
+                if (!isset($message['message'])) {
+                    continue;
+                }
+
+                if (empty($message['message'])) {
+                    continue;
+                }
+
+
+                $booksToString = '';
+//                $books = explode('separator', str_replace(['[', ']'], 'separator', '[test] test1 [test2  ] test 3'));
+                $books = explode('separator', str_replace(['[', ']'], 'separator', $message['message']));
+                foreach ($books as $key => $book) {
+                    if ($key % 2 === 1) {
+                        $bookFileName = "Книга ". str_replace(['/', '\\', '\\/'], "_", $book);
+                        $bookFileName = substr($bookFileName, 0, 130);
+                        if (!file_exists($path . "Книга ". str_replace(['/', '\\', '\\/'], "_", $book) . '.md')) {
+                            $textBook = "
+#book 
+$book
+
+### Zero-Links
+[[Ильму Аль Калям]]
+
+                                 ";
+                            file_put_contents(
+                                $path . $bookFileName . '.md',
+                                $textBook);
+                        }
+                        $booksToString .= "\n [[Книга $book]]";
+                    }
+                }
+
+                $text = '
+202209212208
+Tags: #Калям #ИльмуКалям #Kalam #post
+__
+# Мысль "' . str_replace("\n", "", substr($message['message'], 0, 100)) . '" ' . $message['id'] . '
+' . '
+```text
+' . $message['message'] . "
+```
+__
+### Zero-Links
+[[Ильму Аль Калям]]
+$booksToString
+
+__ 
+### Links
+[Ссылка на Ильму Аль Калям](https://t.me/ilmu_al_kalam_official/" . $message['id'] . ')
+';
+
+                file_put_contents(
+                    $path . 'Пост "' . $message['id'] . '".md',
+                    $text
+                );
+
+                $messageIds[] = $message['id'];
+                echo "мысль " . '"' . substr(
+                        $message['message'],
+                        0,
+                        100
+                    ) . '" ' . " сохранена! \n";
+
+            }
+        } while (count($messageIds) > 0);
+
+        echo "Идентификаторы сообщений успешно сохранены в файл! \n";
+    }
 }
